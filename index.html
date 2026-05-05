@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Secure Access 2FA - Admin Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.outline-icon { font-variation-settings: 'FILL' 0; }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="text-slate-800 bg-gray-200 flex justify-center h-screen overflow-hidden relative">
+
+    <div class="w-full max-w-[400px] h-full bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden">
+        
+        <!-- HEADER -->
+        <header class="bg-[#1a2b4c] text-white px-4 py-4 flex items-center gap-3 z-10 shadow-md relative">
+            <div class="w-8 h-8 bg-white/10 rounded border border-white/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px] text-green-400">shield_lock</span>
+            </div>
+            <div>
+                <h1 id="header-title" class="font-bold text-[15px] tracking-wide uppercase">TRANG CHỦ</h1>
+            </div>
+            <div id="onlineBadge" class="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1a2b4c]"></div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto pb-20 relative">
+
+            <!-- TAB 1: TRANG CHỦ -->
+            <div id="tab-home" class="h-full flex flex-col items-center pt-8 px-6 relative">
+                <div class="mb-6">
+                    <span id="main-lock-icon" class="material-symbols-outlined text-[100px] text-[#1a2b4c]">lock</span>
+                </div>
+
+                <div class="w-full flex flex-col items-center mb-8">
+                    <p class="font-bold text-[13px] mb-3 uppercase">TRẠNG THÁI: <span id="statusText" class="text-[#dc2626]">ĐANG KHOÁ</span></p>
+                    <button id="unlockButton" class="w-full bg-[#16a34a] hover:bg-green-700 text-white font-bold py-3.5 rounded-lg text-[15px] shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all">
+                        <span class="material-symbols-outlined text-[20px]">key</span> Yêu cầu Mở khoá
+                    </button>
+                </div>
+
+                <!-- 5 HOẠT ĐỘNG GẦN NHẤT -->
+                <div class="w-full">
+                    <h3 class="font-extrabold text-[11px] text-gray-400 uppercase tracking-tighter mb-2 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">history</span> 5 hoạt động gần đây
+                    </h3>
+                    <div id="recent-logs" class="bg-white rounded-xl border border-gray-100 p-1 shadow-sm"></div>
+                </div>
+
+                <!-- POPUP XÁC THỰC 2FA -->
+                <div id="auth-modal" class="absolute top-10 left-4 right-4 bg-white rounded-xl shadow-2xl border border-gray-100 p-5 hidden flex-col items-center z-20">
+                    <h2 id="modal-title" class="font-bold text-[15px] mb-1 text-[#1a2b4c]">YÊU CẦU XÁC THỰC</h2>
+                    <p id="modal-desc" class="text-gray-500 text-xs mb-4 text-center">Vui lòng nhập mã PIN cấp 2 để mở cửa</p>
+                    <input type="number" id="pinInput" placeholder="Mã PIN 6 số" class="w-full text-center text-xl tracking-[0.2em] font-bold border border-gray-200 rounded-lg p-3 mb-2 focus:outline-none focus:border-blue-500">
+                    <p id="authErrorMsg" class="text-red-500 text-xs font-bold hidden mb-3">Mã PIN không chính xác!</p>
+                    <div class="flex gap-2 w-full mt-2">
+                        <button id="btnApproveAuth" class="flex-1 bg-[#16a34a] text-white font-bold py-3 rounded-lg text-sm">MỞ CỬA</button>
+                        <button id="btnRejectAuth" class="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg text-sm">TỪ CHỐI</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: LỊCH SỬ -->
+            <div id="tab-history" class="h-full hidden flex flex-col bg-white">
+                <div class="p-3 bg-gray-50 border-b border-gray-200 flex gap-2">
+                    <button id="filter-all" onclick="setFilter('all')" class="filter-btn flex-1 py-1.5 rounded-md text-[11px] font-bold bg-[#1a2b4c] text-white">TẤT CẢ</button>
+                    <button id="filter-success" onclick="setFilter('success')" class="filter-btn flex-1 py-1.5 rounded-md text-[11px] font-bold bg-white text-gray-500 border border-gray-200">THÀNH CÔNG</button>
+                    <button id="filter-error" onclick="setFilter('error')" class="filter-btn flex-1 py-1.5 rounded-md text-[11px] font-bold bg-white text-gray-500 border border-gray-200">LỖI/TỪ CHỐI</button>
+                </div>
+                <div id="historyList" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"></div>
+            </div>
+
+            <!-- TAB 3: QUẢN LÝ THẺ -->
+            <div id="tab-cards" class="h-full hidden bg-gray-50 p-4">
+                <button id="btnAddCardMode" class="w-full bg-[#1a2b4c] text-white font-bold py-3.5 rounded-lg text-sm mb-5 shadow-sm flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined">add_card</span> THÊM THẺ MỚI
+                </button>
+                <h3 class="font-bold text-xs text-gray-500 uppercase tracking-wider mb-3 ml-1">Danh sách thẻ hợp lệ</h3>
+                <div id="cardsList" class="flex flex-col gap-3"></div>
+            </div>
+
+            <!-- TAB 4: THIẾT LẬP -->
+            <div id="tab-settings" class="h-full hidden bg-white">
+                <div class="p-4 flex flex-col text-sm text-gray-700">
+                    <div class="flex items-center gap-2 font-bold text-[#1a2b4c] mb-4 bg-blue-50 p-3 rounded-lg">
+                        <span class="material-symbols-outlined text-[20px]">password</span> ĐỔI MẬT KHẨU APP (CẤP 2)
+                    </div>
+                    <div class="px-2 mb-6">
+                        <input type="number" id="oldPin" placeholder="Mã PIN Cũ" class="w-full border-b border-gray-200 py-3 mb-3 focus:outline-none text-center">
+                        <input type="number" id="newPin" placeholder="Mã PIN Mới" class="w-full border-b border-gray-200 py-3 mb-3 focus:outline-none text-center">
+                        <input type="number" id="confirmPin" placeholder="Xác nhận PIN Mới" class="w-full border-b border-gray-200 py-3 mb-4 focus:outline-none text-center">
+                        <p id="pwdMsg" class="text-xs font-bold hidden mb-2"></p>
+                        <button id="btnSavePwd" class="w-full bg-[#1a2b4c] text-white font-bold py-3.5 rounded-lg text-sm shadow-md active:scale-95 transition-transform">LƯU THAY ĐỔI</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- BOTTOM NAV -->
+        <nav class="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[70px] pb-2 z-30">
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-[#16a34a] w-[20%]">
+                <span class="material-symbols-outlined text-[24px]">home</span>
+                <span class="text-[10px] font-bold">Trang chủ</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center gap-1 text-gray-400 w-[20%]">
+                <span class="material-symbols-outlined outline-icon text-[24px]">history</span>
+                <span class="text-[10px] font-bold">Lịch sử</span>
+            </button>
+            <button onclick="switchTab('cards')" id="nav-cards" class="flex flex-col items-center gap-1 text-gray-400 w-[20%]">
+                <span class="material-symbols-outlined outline-icon text-[24px]">smart_card_reader</span>
+                <span class="text-[10px] font-bold">Quản lý thẻ</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-gray-400 w-[20%]">
+                <span class="material-symbols-outlined outline-icon text-[24px]">settings</span>
+                <span class="text-[10px] font-bold">Thiết lập</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- MODAL CHỜ QUÉT THẺ -->
+    <div id="waitCardModal" class="fixed inset-0 bg-slate-900/70 hidden flex-col items-center justify-center z-50 px-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-[320px] flex flex-col items-center shadow-2xl">
+            <span class="material-symbols-outlined text-[60px] text-blue-500 animate-pulse mb-4">sensors</span>
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Đang chờ quét thẻ...</h3>
+            <p class="text-xs text-gray-500 mb-6">Vui lòng đưa thẻ lại gần đầu đọc</p>
+            <button id="btnCancelAddCard" class="w-full bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-sm">HỦY BỎ</button>
+        </div>
+    </div>
+
+    <!-- MODAL NHẬP TÊN THẺ -->
+    <div id="cardInfoModal" class="fixed inset-0 bg-slate-900/70 hidden flex-col items-center justify-center z-50 px-4">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-[320px] flex flex-col shadow-2xl">
+            <h3 id="cardModalTitle" class="font-bold text-lg text-[#1a2b4c] mb-2">Thông tin Thẻ</h3>
+            <p id="scannedUidText" class="text-xs text-green-600 font-mono bg-green-50 p-2 rounded mb-4 text-center"></p>
+            <input type="text" id="cardNameInput" placeholder="Tên chủ thẻ" class="w-full border-2 border-gray-200 py-2 px-3 rounded-lg mb-6 focus:outline-none focus:border-[#1a2b4c]">
+            <div class="flex gap-2 w-full">
+                <button id="btnCancelCardInfo" class="flex-1 bg-gray-100 text-gray-600 font-bold py-2.5 rounded-lg text-sm">Hủy</button>
+                <button id="btnSaveCardInfo" class="flex-1 bg-[#1a2b4c] text-white font-bold py-2.5 rounded-lg text-sm shadow-md">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get, child, onValue, push, remove, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDMltL_D9Iy5tQjF2ykgbfC_taF9m7_K2k",
+            authDomain: "smartdoor-d4d4d.firebaseapp.com",
+            databaseURL: "https://smartdoor-d4d4d-default-rtdb.firebaseio.com",
+            projectId: "smartdoor-d4d4d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db);
+        let filterStatus = 'all';
+        let isEmergencyUnlock = false;
+        let isEnrolling = false;
+        let pendingUid = "";
+
+        // --- 1. ĐIỀU HƯỚNG TAB ---
+        window.switchTab = function(activeTab) {
+            const tabs = ['home', 'history', 'cards', 'settings'];
+            const titles = { 'home': 'TRANG CHỦ', 'history': 'LỊCH SỬ', 'cards': 'QUẢN LÝ THẺ', 'settings': 'THIẾT LẬP' };
+            tabs.forEach(tab => {
+                document.getElementById(`tab-${tab}`).classList.add('hidden');
+                document.getElementById(`nav-${tab}`).classList.replace('text-[#16a34a]', 'text-gray-400');
+            });
+            document.getElementById(`tab-${activeTab}`).classList.remove('hidden');
+            document.getElementById(`nav-${activeTab}`).classList.replace('text-gray-400', 'text-[#16a34a]');
+            document.getElementById('header-title').innerText = titles[activeTab];
+            if(activeTab === 'history') loadHistory();
+        }
+
+        // --- 2. THEO DÕI TRẠNG THÁI CỬA ---
+        onValue(ref(db, '/smart_door/door/Door_Status'), (snapshot) => {
+            const data = snapshot.val();
+            const stxt = document.getElementById("statusText");
+            const icon = document.getElementById("main-lock-icon");
+            const btn = document.getElementById("unlockButton");
+            const modal = document.getElementById("auth-modal");
+
+            if (data === "WAITING_AUTH") {
+                stxt.innerText = "CHỜ XÁC THỰC PIN (THẺ)"; stxt.className = "text-yellow-500 font-black";
+                isEmergencyUnlock = false; 
+                document.getElementById("modal-title").innerText = "XÁC THỰC TRUY CẬP";
+                document.getElementById("modal-desc").innerText = "Có người đang quẹt thẻ tại cửa. Nhập mã PIN để cho phép vào.";
+                modal.classList.remove("hidden"); modal.classList.add("flex");
+                icon.style.opacity = "0.2";
+                btn.disabled = true;
+            } else if (data === "OPENED") {
+                stxt.innerText = "MỞ THÀNH CÔNG"; stxt.className = "text-[#16a34a] font-black";
+                icon.innerText = "lock_open"; icon.className = "material-symbols-outlined text-[100px] text-[#16a34a]";
+                btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span> ĐÃ MỞ KHÓA`;
+                btn.disabled = true;
+                modal.classList.add("hidden"); icon.style.opacity = "1";
+            } else {
+                stxt.innerText = "ĐANG KHOÁ"; stxt.className = "text-[#dc2626] font-black";
+                icon.innerText = "lock"; icon.className = "material-symbols-outlined text-[100px] text-[#1a2b4c]";
+                btn.innerHTML = `<span class="material-symbols-outlined text-[20px]">key</span> Yêu cầu Mở khoá`;
+                btn.disabled = false;
+                modal.classList.add("hidden"); icon.style.opacity = "1";
+            }
+        });
+
+        // --- 3. XỬ LÝ MỞ KHÓA ---
+        document.getElementById("unlockButton").addEventListener("click", () => {
+            isEmergencyUnlock = true;
+            document.getElementById("modal-title").innerText = "MỞ KHÓA KHẨN CẤP";
+            document.getElementById("modal-desc").innerText = "Yêu cầu mở cửa từ xa không cần thẻ vật lý.";
+            document.getElementById("pinInput").value = "";
+            document.getElementById("authErrorMsg").classList.add("hidden");
+            document.getElementById("auth-modal").classList.replace("hidden", "flex");
+            document.getElementById("main-lock-icon").style.opacity = "0.2";
+        });
+
+        document.getElementById("btnApproveAuth").addEventListener("click", async () => {
+            const pin = document.getElementById("pinInput").value;
+            const snap = await get(child(dbRef, '/smart_door/settings/level2_password'));
+            const correctPin = (snap.val() || "123456").toString();
+
+            if (pin === correctPin) {
+                set(ref(db, "/smart_door/door/Unlock_Request"), true);
+                set(ref(db, "/smart_door/door/Door_Status"), "OPENED");
+                const logMsg = isEmergencyUnlock ? "Admin mở khóa khẩn cấp" : "Đồng ý mở cửa (Thẻ vật lý)";
+                logHistory(logMsg, "success");
+                document.getElementById("auth-modal").classList.replace("flex", "hidden");
+                document.getElementById("pinInput").value = "";
+            } else {
+                document.getElementById("authErrorMsg").classList.remove("hidden");
+            }
+        });
+
+        document.getElementById("btnRejectAuth").addEventListener("click", () => {
+            set(ref(db, "/smart_door/door/Door_Status"), "LOCKED");
+            logHistory(isEmergencyUnlock ? "Hủy yêu cầu mở khẩn cấp" : "Từ chối yêu cầu quẹt thẻ", "error");
+            document.getElementById("auth-modal").classList.replace("flex", "hidden");
+            document.getElementById("main-lock-icon").style.opacity = "1";
+        });
+
+        // --- 4. LỊCH SỬ ---
+        function logHistory(action, type) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN') + ' ' + now.toLocaleDateString('vi-VN');
+            push(ref(db, "/smart_door/history"), { time: timeStr, action: action, type: type });
+        }
+
+        onValue(query(ref(db, '/smart_door/history'), limitToLast(5)), (snapshot) => {
+            const container = document.getElementById("recent-logs");
+            container.innerHTML = "";
+            if (snapshot.exists()) {
+                Object.values(snapshot.val()).reverse().forEach(log => {
+                    const color = log.type === 'success' ? 'bg-green-500' : 'bg-red-500';
+                    container.innerHTML += `<div class="flex items-center gap-2 p-2 border-b border-gray-50 last:border-0">
+                        <div class="w-1.5 h-1.5 rounded-full ${color}"></div>
+                        <span class="text-[11px] font-bold text-gray-700 flex-1">${log.action}</span>
+                    </div>`;
+                });
+            }
+        });
+
+        // --- FIX LỖI BỘ LỌC BIẾN MẤT ---
+        window.setFilter = function(f) {
+            filterStatus = f;
+            const filterIds = ['all', 'success', 'error'];
+            filterIds.forEach(id => {
+                const btn = document.getElementById(`filter-${id}`);
+                if (id === f) {
+                    btn.className = "filter-btn flex-1 py-1.5 rounded-md text-[11px] font-bold bg-[#1a2b4c] text-white";
+                } else {
+                    btn.className = "filter-btn flex-1 py-1.5 rounded-md text-[11px] font-bold bg-white text-gray-500 border border-gray-200";
+                }
+            });
+            loadHistory();
+        }
+
+        function loadHistory() {
+            onValue(ref(db, '/smart_door/history'), (snapshot) => {
+                const list = document.getElementById("historyList");
+                list.innerHTML = "";
+                if (snapshot.exists()) {
+                    let items = Object.values(snapshot.val()).reverse();
+                    if (filterStatus !== 'all') items = items.filter(i => i.type === filterStatus);
+                    items.forEach(item => {
+                        const color = item.type === 'success' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+                        list.innerHTML += `<div class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 shadow-sm">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center ${color}"><span class="material-symbols-outlined text-lg">${item.type === 'success' ? 'check' : 'close'}</span></div>
+                            <div><h4 class="font-bold text-sm text-gray-800">${item.action}</h4><p class="text-[11px] text-gray-400">${item.time}</p></div>
+                        </div>`;
+                    });
+                }
+            }, { onlyOnce: true });
+        }
+
+        // --- 5. QUẢN LÝ THẺ & FIX LỖI NÚT HỦY ---
+        onValue(ref(db, '/smart_door/cards'), (snapshot) => {
+            const list = document.getElementById("cardsList");
+            list.innerHTML = "";
+            snapshot.forEach(childSnap => {
+                const card = childSnap.val();
+                const uid = childSnap.key;
+                list.innerHTML += `<div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center"><span class="material-symbols-outlined">badge</span></div>
+                        <div class="flex-1"><h3 class="font-bold text-sm">${card.name}</h3><p class="text-[11px] text-gray-400">UID: ${uid}</p></div>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-gray-50">
+                        <button onclick="deleteCard('${uid}')" class="flex-1 py-1 bg-red-50 text-red-600 text-xs font-bold rounded">Xóa</button>
+                    </div>
+                </div>`;
+            });
+        });
+
+        document.getElementById("btnAddCardMode").addEventListener("click", () => {
+            isEnrolling = true;
+            set(ref(db, '/smart_door/door/Enroll_Mode'), true);
+            document.getElementById("waitCardModal").classList.replace('hidden', 'flex');
+        });
+
+        // FIX: Sự kiện nút Hủy khi đang chờ quét thẻ
+        document.getElementById("btnCancelAddCard").addEventListener("click", () => {
+            isEnrolling = false;
+            set(ref(db, '/smart_door/door/Enroll_Mode'), false);
+            document.getElementById("waitCardModal").classList.replace('flex', 'hidden');
+        });
+
+        // FIX: Sự kiện nút Hủy ở modal nhập tên
+        document.getElementById("btnCancelCardInfo").addEventListener("click", () => {
+            document.getElementById("cardInfoModal").classList.replace('flex', 'hidden');
+            pendingUid = "";
+        });
+
+        onValue(ref(db, '/smart_door/door/New_Card_UID'), (snap) => {
+            const uid = snap.val();
+            if (isEnrolling && uid && uid !== "") {
+                pendingUid = uid; isEnrolling = false;
+                set(ref(db, '/smart_door/door/Enroll_Mode'), false);
+                set(ref(db, '/smart_door/door/New_Card_UID'), "");
+                document.getElementById("waitCardModal").classList.replace('flex', 'hidden');
+                document.getElementById("scannedUidText").innerText = `UID: ${uid}`;
+                document.getElementById("cardNameInput").value = "";
+                document.getElementById("cardInfoModal").classList.replace('hidden', 'flex');
+            }
+        });
+
+        window.deleteCard = (uid) => confirm(`Xóa thẻ ${uid}?`) && remove(ref(db, `/smart_door/cards/${uid}`));
+
+        document.getElementById("btnSaveCardInfo").addEventListener("click", () => {
+            const name = document.getElementById("cardNameInput").value || "Không tên";
+            set(ref(db, `/smart_door/cards/${pendingUid}`), { name: name });
+            document.getElementById("cardInfoModal").classList.replace('flex', 'hidden');
+            logHistory(`Đã thêm thẻ mới: ${name}`, "success");
+        });
+
+        // --- 6. CÀI ĐẶT ---
+        document.getElementById("btnSavePwd").addEventListener("click", async () => {
+            const oldP = document.getElementById("oldPin").value;
+            const newP = document.getElementById("newPin").value;
+            const confP = document.getElementById("confirmPin").value;
+            const msg = document.getElementById("pwdMsg");
+            if(!oldP || !newP || !confP) { showMsg(msg, "Vui lòng nhập đủ!", "red"); return; }
+            if(newP !== confP) { showMsg(msg, "PIN mới không khớp!", "red"); return; }
+            const snap = await get(child(dbRef, '/smart_door/settings/level2_password'));
+            if (oldP === (snap.val() || "123456").toString()) {
+                set(ref(db, "/smart_door/settings/level2_password"), Number(newP));
+                showMsg(msg, "Đổi PIN thành công!", "green");
+                document.getElementById("oldPin").value = "";
+                document.getElementById("newPin").value = "";
+                document.getElementById("confirmPin").value = "";
+            } else { showMsg(msg, "PIN cũ không đúng!", "red"); }
+        });
+
+        function showMsg(el, txt, color) {
+            el.innerText = txt; el.className = `text-xs font-bold mb-2 block text-${color}-500`;
+            el.classList.remove("hidden"); setTimeout(() => el.classList.add("hidden"), 3000);
+        }
+    </script>
+</body>
+</html>

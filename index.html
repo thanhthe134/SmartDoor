@@ -9,7 +9,13 @@
     <style>
         .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .material-symbols-outlined.outline-icon { font-variation-settings: 'FILL' 0; }
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f3f4f6; 
+            /* Fix lỗi full màn hình trên trình duyệt điện thoại (Safari/Chrome) */
+            height: 100vh;
+            height: 100dvh;
+        }
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         ::-webkit-scrollbar { width: 4px; }
@@ -17,12 +23,13 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
-<body class="text-slate-800 bg-gray-200 flex justify-center h-screen overflow-hidden relative">
+<body class="text-slate-800 bg-gray-200 flex justify-center overflow-hidden relative">
 
+    <!-- Container chính được thiết lập h-full để theo chiều cao của body -->
     <div class="w-full max-w-[400px] h-full bg-gray-50 flex flex-col relative shadow-2xl overflow-hidden">
         
-        <!-- HEADER -->
-        <header class="bg-[#1a2b4c] text-white px-4 py-4 flex items-center gap-3 z-10 shadow-md relative">
+        <!-- HEADER (Giữ cố định trên cùng) -->
+        <header class="bg-[#1a2b4c] text-white px-4 py-4 flex items-center gap-3 z-10 shadow-md relative flex-shrink-0">
             <div class="w-8 h-8 bg-white/10 rounded border border-white/20 flex items-center justify-center">
                 <span class="material-symbols-outlined text-[20px] text-green-400">shield_lock</span>
             </div>
@@ -32,10 +39,11 @@
             <div id="onlineBadge" class="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1a2b4c]"></div>
         </header>
 
-        <main class="flex-1 overflow-y-auto pb-20 relative">
+        <!-- MAIN CONTENT (Phần giữa có thể cuộn, đã bỏ pb-20) -->
+        <main class="flex-1 overflow-y-auto relative">
 
             <!-- TAB 1: TRANG CHỦ -->
-            <div id="tab-home" class="h-full flex flex-col items-center pt-8 px-6 relative">
+            <div id="tab-home" class="h-full flex flex-col items-center pt-8 px-6 pb-6 relative">
                 <div class="mb-6">
                     <span id="main-lock-icon" class="material-symbols-outlined text-[100px] text-[#1a2b4c]">lock</span>
                 </div>
@@ -79,7 +87,7 @@
             </div>
 
             <!-- TAB 3: QUẢN LÝ THẺ -->
-            <div id="tab-cards" class="h-full hidden bg-gray-50 p-4">
+            <div id="tab-cards" class="h-full hidden overflow-y-auto bg-gray-50 p-4">
                 <button id="btnAddCardMode" class="w-full bg-[#1a2b4c] text-white font-bold py-3.5 rounded-lg text-sm mb-5 shadow-sm flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined">add_card</span> THÊM THẺ MỚI
                 </button>
@@ -88,7 +96,7 @@
             </div>
 
             <!-- TAB 4: THIẾT LẬP -->
-            <div id="tab-settings" class="h-full hidden bg-white">
+            <div id="tab-settings" class="h-full hidden overflow-y-auto bg-white">
                 <div class="p-4 flex flex-col text-sm text-gray-700">
                     <div class="flex items-center gap-2 font-bold text-[#1a2b4c] mb-4 bg-blue-50 p-3 rounded-lg">
                         <span class="material-symbols-outlined text-[20px]">password</span> ĐỔI MẬT KHẨU APP (CẤP 2)
@@ -105,8 +113,8 @@
 
         </main>
 
-        <!-- BOTTOM NAV -->
-        <nav class="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-[70px] pb-2 z-30">
+        <!-- BOTTOM NAV (Đã bỏ absolute, dùng flex-shrink-0 để luôn nằm đáy màn hình) -->
+        <nav class="w-full bg-white border-t border-gray-200 flex justify-around items-center h-[70px] pb-2 z-30 flex-shrink-0 relative">
             <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-[#16a34a] w-[20%]">
                 <span class="material-symbols-outlined text-[24px]">home</span>
                 <span class="text-[10px] font-bold">Trang chủ</span>
@@ -269,7 +277,6 @@
             }
         });
 
-        // --- FIX LỖI BỘ LỌC BIẾN MẤT ---
         window.setFilter = function(f) {
             filterStatus = f;
             const filterIds = ['all', 'success', 'error'];
@@ -302,7 +309,7 @@
             }, { onlyOnce: true });
         }
 
-        // --- 5. QUẢN LÝ THẺ & FIX LỖI NÚT HỦY ---
+        // --- 5. QUẢN LÝ THẺ ---
         onValue(ref(db, '/smart_door/cards'), (snapshot) => {
             const list = document.getElementById("cardsList");
             list.innerHTML = "";
@@ -327,14 +334,12 @@
             document.getElementById("waitCardModal").classList.replace('hidden', 'flex');
         });
 
-        // FIX: Sự kiện nút Hủy khi đang chờ quét thẻ
         document.getElementById("btnCancelAddCard").addEventListener("click", () => {
             isEnrolling = false;
             set(ref(db, '/smart_door/door/Enroll_Mode'), false);
             document.getElementById("waitCardModal").classList.replace('flex', 'hidden');
         });
 
-        // FIX: Sự kiện nút Hủy ở modal nhập tên
         document.getElementById("btnCancelCardInfo").addEventListener("click", () => {
             document.getElementById("cardInfoModal").classList.replace('flex', 'hidden');
             pendingUid = "";
